@@ -302,69 +302,20 @@ class BlackjackEnv(gym.Env):
 
 # Pixel art from Mariia Khmelnytska (https://www.123rf.com/photo_104453049_stock-vector-pixel-art-playing-cards-standart-deck-vector-set.html)
 class BlackjackDoubleEnv(gym.Env):
-    """
-    Blackjack is a card game where the goal is to beat the dealer by obtaining cards
-    that sum to closer to 21 (without going over 21) than the dealers cards.
-    ### Description
-    Card Values:
-    - Face cards (Jack, Queen, King) have a point value of 10.
-    - Aces can either count as 11 (called a 'usable ace') or 1.
-    - Numerical cards (2-9) have a value equal to their number.
-    This game is played with an infinite deck (or with replacement).
-    The game starts with the dealer having one face up and one face down card,
-    while the player has two face up cards.
-    The player can request additional cards (hit, action=1) until they decide to stop (stick, action=0)
-    or exceed 21 (bust, immediate loss).
-    After the player sticks, the dealer reveals their facedown card, and draws
-    until their sum is 17 or greater.  If the dealer goes bust, the player wins.
-    If neither the player nor the dealer busts, the outcome (win, lose, draw) is
-    decided by whose sum is closer to 21.
-    ### Action Space
-    There are two actions: stick (0), and hit (1).
-    ### Observation Space
-    The observation consists of a 3-tuple containing: the player's current sum,
-    the value of the dealer's one showing card (1-10 where 1 is ace),
-    and whether the player holds a usable ace (0 or 1).
-    This environment corresponds to the version of the blackjack problem
-    described in Example 5.1 in Reinforcement Learning: An Introduction
-    by Sutton and Barto (http://incompleteideas.net/book/the-book-2nd.html).
-    ### Rewards
-    - win game: +1
-    - lose game: -1
-    - draw game: 0
-    - win game with natural blackjack:
-        +1.5 (if <a href="#nat">natural</a> is True)
-        +1 (if <a href="#nat">natural</a> is False)
-    ### Arguments
-    ```
-    gym.make('Blackjack-v1', natural=False, sab=False)
-    ```
-    <a id="nat">`natural=False`</a>: Whether to give an additional reward for
-    starting with a natural blackjack, i.e. starting with an ace and ten (sum is 21).
-    <a id="sab">`sab=False`</a>: Whether to follow the exact rules outlined in the book by
-    Sutton and Barto. If `sab` is `True`, the keyword argument `natural` will be ignored.
-    If the player achieves a natural blackjack and the dealer does not, the player
-    will win (i.e. get a reward of +1). The reverse rule does not apply.
-    If both the player and the dealer get a natural, it will be a draw (i.e. reward 0).
-    ### Version History
-    * v0: Initial versions release (1.0.0)
-    """
     def __init__(self, natural=False):
         self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.Tuple((
             spaces.Discrete(32),
             spaces.Discrete(11),
-            spaces.Discrete(2)))
+            spaces.Discrete(2))
+        )
 
-        # Flag to payout 1.5 on a "natural" blackjack win, like casino rules
-        # Ref: http://www.bicyclecards.com/how-to-play/blackjack/
         self.natural = natural
-        # Start the first game
         self.reset()
 
     def step(self, action):
         assert self.action_space.contains(action)
-        if action == 1:  # hit: add a card to players hand and return
+        if action == 1:
             self.player.append(draw_card(self.np_random))
             if is_bust(self.player):
                 terminated = True
@@ -372,14 +323,14 @@ class BlackjackDoubleEnv(gym.Env):
             else:
                 terminated = False
                 reward = 0.
-        elif action == 0:  # stick: play out the dealers hand, and score
+        elif action == 0:
             terminated = True
             while sum_hand(self.dealer) < 17:
                 self.dealer.append(draw_card(self.np_random))
             reward = cmp(score(self.player), score(self.dealer))
             if self.natural and is_natural(self.player) and reward == 1.:
                 reward = 1.5
-        elif action == 2: #double
+        elif action == 2:
             self.player.append(draw_card(self.np_random))
             terminated = True
             while sum_hand(self.dealer) < 17:
@@ -389,7 +340,7 @@ class BlackjackDoubleEnv(gym.Env):
         return self._get_obs(), reward, terminated, {}, {}
 
     def _get_obs(self):
-        return (sum_hand(self.player), self.dealer[0], usable_ace(self.player))
+        return sum_hand(self.player), self.dealer[0], usable_ace(self.player)
 
     def reset(self):
         self.dealer = draw_hand(self.np_random)
@@ -398,81 +349,29 @@ class BlackjackDoubleEnv(gym.Env):
             
             
 class BlackjackDoubleCntEnv(gym.Env):
-    """
-    Blackjack is a card game where the goal is to beat the dealer by obtaining cards
-    that sum to closer to 21 (without going over 21) than the dealers cards.
-    ### Description
-    Card Values:
-    - Face cards (Jack, Queen, King) have a point value of 10.
-    - Aces can either count as 11 (called a 'usable ace') or 1.
-    - Numerical cards (2-9) have a value equal to their number.
-    This game is played with an infinite deck (or with replacement).
-    The game starts with the dealer having one face up and one face down card,
-    while the player has two face up cards.
-    The player can request additional cards (hit, action=1) until they decide to stop (stick, action=0)
-    or exceed 21 (bust, immediate loss).
-    After the player sticks, the dealer reveals their facedown card, and draws
-    until their sum is 17 or greater.  If the dealer goes bust, the player wins.
-    If neither the player nor the dealer busts, the outcome (win, lose, draw) is
-    decided by whose sum is closer to 21.
-    ### Action Space
-    There are two actions: stick (0), and hit (1).
-    ### Observation Space
-    The observation consists of a 3-tuple containing: the player's current sum,
-    the value of the dealer's one showing card (1-10 where 1 is ace),
-    and whether the player holds a usable ace (0 or 1).
-    This environment corresponds to the version of the blackjack problem
-    described in Example 5.1 in Reinforcement Learning: An Introduction
-    by Sutton and Barto (http://incompleteideas.net/book/the-book-2nd.html).
-    ### Rewards
-    - win game: +1
-    - lose game: -1
-    - draw game: 0
-    - win game with natural blackjack:
-        +1.5 (if <a href="#nat">natural</a> is True)
-        +1 (if <a href="#nat">natural</a> is False)
-    ### Arguments
-    ```
-    gym.make('Blackjack-v1', natural=False, sab=False)
-    ```
-    <a id="nat">`natural=False`</a>: Whether to give an additional reward for
-    starting with a natural blackjack, i.e. starting with an ace and ten (sum is 21).
-    <a id="sab">`sab=False`</a>: Whether to follow the exact rules outlined in the book by
-    Sutton and Barto. If `sab` is `True`, the keyword argument `natural` will be ignored.
-    If the player achieves a natural blackjack and the dealer does not, the player
-    will win (i.e. get a reward of +1). The reverse rule does not apply.
-    If both the player and the dealer get a natural, it will be a draw (i.e. reward 0).
-    ### Version History
-    * v0: Initial versions release (1.0.0)
-    """
-
     def __init__(self, natural=False):
         self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.Tuple((
             spaces.Discrete(32),
             spaces.Discrete(11),
             spaces.Discrete(2),
-            spaces.Discrete(90)))
-        self.counting_rule = {1 : -2, 2 : 1, 3 : 2, 4 : 2, 
-                              5 : 3, 6 : 2, 7 : 1, 8 : 0, 
-                              9 : -1, 10 : -2}
+            spaces.Discrete(90)
+        ))
+        self.counting_rule = {
+            1: -2, 2: 1, 3: 2, 4: 2, 5: 3, 6: 2, 7: 1, 8: 0, 9: -1, 10: -2
+        }
         self.deck = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10] * 4
         self.count = 0
 
-        # Flag to payout 1.5 on a "natural" blackjack win, like casino rules
-        # Ref: http://www.bicyclecards.com/how-to-play/blackjack/
         self.natural = natural
-        # Start the first game
         self.reset()
         
     def draw_card(self, np_random):
-        #draw card & save instance
         card = int(np_random.choice(self.deck))
         self.deck.remove(card)
         return card
     
     def draw_hand(self, np_random):
-        #draw card & save instance
         return [self.draw_card(np_random), self.draw_card(np_random)]
     
     def count_card(self, card):
@@ -480,7 +379,7 @@ class BlackjackDoubleCntEnv(gym.Env):
 
     def step(self, action):
         assert self.action_space.contains(action)
-        if action == 1:  # hit: add a card to players hand and return
+        if action == 1:
             card = self.draw_card(self.np_random)
             self.count_card(card)
             self.player.append(card)
@@ -490,7 +389,7 @@ class BlackjackDoubleCntEnv(gym.Env):
             else:
                 terminated = False
                 reward = 0.
-        elif action == 0:  # stick: play out the dealers hand, and score
+        elif action == 0:
             terminated = True
             while sum_hand(self.dealer) < 17:
                 self.dealer.append(self.draw_card(self.np_random))
@@ -499,7 +398,7 @@ class BlackjackDoubleCntEnv(gym.Env):
             reward = cmp(score(self.player), score(self.dealer))
             if self.natural and is_natural(self.player) and reward == 1.:
                 reward = 1.5
-        elif action == 2: #double
+        elif action == 2:
             card = self.draw_card(self.np_random)
             self.count_card(card)
             self.player.append(card)
@@ -513,7 +412,7 @@ class BlackjackDoubleCntEnv(gym.Env):
         return self._get_obs(), reward, terminated, {}
 
     def _get_obs(self):
-        return (sum_hand(self.player), self.dealer[0], usable_ace(self.player), self.count)
+        return sum_hand(self.player), self.dealer[0], usable_ace(self.player), self.count
 
     def reset(self):
         if len(self.deck) < 15:
